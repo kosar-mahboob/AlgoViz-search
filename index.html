@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlgoViz – Search Algorithm Visualizer</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ══ HEADER ═══════════════════════════════════════ -->
+<header id="site-header">
+  <a class="logo" href="#" onclick="navigate('home');return false;">
+    AlgoViz <span>search</span>
+  </a>
+  <div id="mode-indicator">home</div>
+</header>
+
+<!-- ══ MAIN ══════════════════════════════════════════ -->
+<main>
+
+  <!-- ── HOME ─────────────────────────────────────── -->
+  <section id="home" class="section active">
+    <div class="home-hero">
+      <h1>Search <em>Algorithms</em><br>Come to Life</h1>
+      <p>Visualize BFS, DFS, A*, UCS, and more — on graphs, mazes, and puzzles. Step through every decision, understand every frontier.</p>
+    </div>
+    <div class="home-cards">
+      <div class="home-card" onclick="navigate('graph')">
+        <div class="icon">🔵</div>
+        <h2>Graph Visualizer</h2>
+        <p>Build a custom graph, set weights, and watch algorithms find the shortest path between any two nodes.</p>
+        <span class="tag">BFS · DFS · UCS · Greedy · A*</span>
+      </div>
+      <div class="home-card" onclick="navigate('maze')">
+        <div class="icon">🗺️</div>
+        <h2>Maze Visualizer</h2>
+        <p>Draw walls, generate mazes, and explore classic grid-based search with step-by-step execution.</p>
+        <span class="tag">BFS · DFS · DLS · IDDFS · A*</span>
+      </div>
+      <div class="home-card" onclick="navigate('games')">
+        <div class="icon">🎮</div>
+        <h2>Algorithm Games</h2>
+        <p>Solve Word Ladders, 8-Puzzles, and River Crossing challenges — manually or watch the AI solve them.</p>
+        <span class="tag">3 Puzzles · Auto-Solve</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── GRAPH VISUALIZER ──────────────────────────── -->
+  <section id="graph" class="section">
+    <div class="tool-header">
+      <button class="btn btn-back" onclick="navigate('home')">← Home</button>
+      <h2>Graph Algorithm Visualizer</h2>
+      <span id="graph-mode-badge" class="mode-badge add-node">Mode: Add Node</span>
+    </div>
+
+    <div class="graph-layout">
+      <!-- Canvas -->
+      <div>
+        <div class="canvas-wrap">
+          <canvas id="graphCanvas" width="800" height="480"></canvas>
+        </div>
+        <div class="ctrl-row mt-1">
+          <button class="btn btn-secondary btn-sm" id="g-mode-node" onclick="graphSetMode('node')">➕ Add Node</button>
+          <button class="btn btn-secondary btn-sm" id="g-mode-edge" onclick="graphSetMode('edge')">🔗 Add Edge</button>
+          <button class="btn btn-secondary btn-sm" id="g-mode-move" onclick="graphSetMode('move')">✋ Move</button>
+          <button class="btn btn-secondary btn-sm" id="g-mode-delete" onclick="graphSetMode('delete')">🗑 Delete</button>
+          <div class="sep"></div>
+          <button class="btn btn-secondary btn-sm" id="g-set-start" onclick="graphSetMode('start')">🟢 Set Start</button>
+          <button class="btn btn-secondary btn-sm" id="g-set-goal" onclick="graphSetMode('goal')">🔴 Set Goal</button>
+          <div class="sep"></div>
+          <label style="display:inline-flex;align-items:center;gap:5px;font-size:0.8rem;">
+            <input type="checkbox" id="g-directed"> Directed
+          </label>
+        </div>
+        <div class="panel mt-1">
+          <div class="panel-title">Log</div>
+          <div class="log-area" id="graphLog"></div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="graph-sidebar">
+        <div class="panel">
+          <div class="panel-title">Algorithm</div>
+          <select id="graph-algo" style="width:100%;margin-bottom:0.5rem;">
+            <option value="bfs">BFS (Breadth-First)</option>
+            <option value="dfs">DFS (Depth-First)</option>
+            <option value="ucs">UCS / Dijkstra</option>
+            <option value="greedy">Greedy Best-First</option>
+            <option value="astar" selected>A* Search</option>
+          </select>
+          <label>Speed</label>
+          <input type="range" id="graph-speed" min="50" max="800" value="300">
+          <div class="small mt-1" id="graph-speed-val">300ms/step</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Controls</div>
+          <div class="btn-group">
+            <button class="btn btn-primary" onclick="graphRun()">▶ Run</button>
+            <button class="btn btn-secondary" onclick="graphStep()">⏭ Step</button>
+            <button class="btn btn-secondary" onclick="graphReset()">↺ Reset</button>
+            <button class="btn btn-danger" onclick="graphClear()">✕ Clear All</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Statistics</div>
+          <div class="stats-row" style="flex-direction:column;gap:5px;">
+            <div class="stat-chip">
+              <span class="val" id="g-stat-explored">0</span>
+              <span class="lbl">Explored</span>
+            </div>
+            <div class="stat-chip">
+              <span class="val" id="g-stat-frontier">0</span>
+              <span class="lbl">Frontier</span>
+            </div>
+            <div class="stat-chip">
+              <span class="val" id="g-stat-cost">–</span>
+              <span class="lbl">Path Cost</span>
+            </div>
+            <div class="stat-chip">
+              <span class="val" id="g-stat-steps">0</span>
+              <span class="lbl">Steps</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Presets</div>
+          <div class="btn-group">
+            <button class="btn btn-outline btn-sm" onclick="graphLoadPreset('simple')">Simple Triangle</button>
+            <button class="btn btn-outline btn-sm" onclick="graphLoadPreset('city')">City Network</button>
+            <button class="btn btn-outline btn-sm" onclick="graphLoadPreset('deadend')">Dead End Graph</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Import / Export</div>
+          <div class="btn-group">
+            <button class="btn btn-secondary btn-sm" onclick="graphExport()">⬇ Export JSON</button>
+            <button class="btn btn-secondary btn-sm" onclick="graphImportBtn()">⬆ Import JSON</button>
+          </div>
+          <input type="file" id="graphImportFile" accept=".json" style="display:none" onchange="graphImportFile(event)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Edge Weight Modal -->
+    <div class="modal-overlay" id="edgeModal">
+      <div class="modal-box">
+        <h3>Add Edge</h3>
+        <div class="form-row">
+          <label>Weight</label>
+          <input type="number" id="edgeWeight" value="1" min="1" max="999" style="width:100%">
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary" onclick="closeEdgeModal(false)">Cancel</button>
+          <button class="btn btn-primary" onclick="closeEdgeModal(true)">Add</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── MAZE VISUALIZER ───────────────────────────── -->
+  <section id="maze" class="section">
+    <div class="tool-header">
+      <button class="btn btn-back" onclick="navigate('home')">← Home</button>
+      <h2>Maze / Grid Visualizer</h2>
+    </div>
+
+    <div class="maze-layout">
+      <div>
+        <div class="canvas-wrap">
+          <canvas id="mazeCanvas"></canvas>
+        </div>
+        <div class="ctrl-row mt-1">
+          <button class="btn btn-secondary btn-sm" id="m-tool-wall" onclick="mazeSetTool('wall')">🧱 Wall</button>
+          <button class="btn btn-secondary btn-sm" id="m-tool-start" onclick="mazeSetTool('start')">🟢 Start</button>
+          <button class="btn btn-secondary btn-sm" id="m-tool-goal" onclick="mazeSetTool('goal')">🔴 Goal</button>
+          <button class="btn btn-secondary btn-sm" id="m-tool-erase" onclick="mazeSetTool('erase')">⬜ Erase</button>
+          <div class="sep"></div>
+          <button class="btn btn-secondary btn-sm" onclick="mazeGenerate('dfs')">🌀 Gen Maze</button>
+          <button class="btn btn-secondary btn-sm" onclick="mazeRandomWalls()">🎲 Random</button>
+          <button class="btn btn-secondary btn-sm" onclick="mazeClear()">✕ Clear</button>
+        </div>
+        <div class="panel mt-1">
+          <div class="panel-title">Log</div>
+          <div class="log-area" id="mazeLog"></div>
+        </div>
+      </div>
+
+      <div class="maze-sidebar">
+        <div class="panel">
+          <div class="panel-title">Algorithm</div>
+          <select id="maze-algo" style="width:100%;margin-bottom:0.6rem;">
+            <option value="bfs">BFS</option>
+            <option value="dfs">DFS</option>
+            <option value="dls">DLS (Depth-Limited)</option>
+            <option value="iddfs">IDDFS</option>
+            <option value="ucs">UCS</option>
+            <option value="greedy">Greedy</option>
+            <option value="astar" selected>A*</option>
+          </select>
+          <div id="dls-depth-row" class="hidden">
+            <label>Depth Limit</label>
+            <input type="number" id="dls-depth" value="20" min="1" max="200" style="width:100%">
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Grid Size</div>
+          <label>Columns: <span id="maze-cols-val">25</span></label>
+          <input type="range" id="maze-cols" min="10" max="50" value="25" oninput="mazeResizeGrid()">
+          <label class="mt-1">Rows: <span id="maze-rows-val">20</span></label>
+          <input type="range" id="maze-rows" min="8" max="40" value="20" oninput="mazeResizeGrid()">
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Speed</div>
+          <input type="range" id="maze-speed" min="10" max="500" value="60">
+          <div class="small mt-1" id="maze-speed-val">60ms/step</div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Controls</div>
+          <button class="btn btn-primary" onclick="mazeRun()">▶ Run</button>
+          <button class="btn btn-secondary mt-1" onclick="mazeStepOnce()">⏭ Step</button>
+          <button class="btn btn-secondary mt-1" onclick="mazePause()">⏸ Pause</button>
+          <button class="btn btn-secondary mt-1" onclick="mazeReset()">↺ Reset</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Statistics</div>
+          <div class="stats-row" style="flex-direction:column;gap:5px;">
+            <div class="stat-chip">
+              <span class="val" id="m-stat-explored">0</span>
+              <span class="lbl">Explored</span>
+            </div>
+            <div class="stat-chip">
+              <span class="val" id="m-stat-frontier">0</span>
+              <span class="lbl">Frontier</span>
+            </div>
+            <div class="stat-chip">
+              <span class="val" id="m-stat-path">–</span>
+              <span class="lbl">Path Len</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── GAMES ─────────────────────────────────────── -->
+  <section id="games" class="section">
+    <!-- Game Home / Selector -->
+    <div id="game-home" class="game-page active">
+      <div class="tool-header">
+        <button class="btn btn-back" onclick="navigate('home')">← Home</button>
+        <h2>Algorithm Games</h2>
+      </div>
+      <div class="game-cards">
+        <div class="game-card" onclick="openGame('wordladder')">
+          <div class="icon">🔤</div>
+          <h3>Word Ladder</h3>
+          <p>Transform a word into another, one letter at a time. Only valid words allowed!</p>
+          <span class="algo-badge">BFS – Shortest Path</span>
+        </div>
+        <div class="game-card" onclick="openGame('sliding')">
+          <div class="icon">🔢</div>
+          <h3>8-Puzzle (Sliding)</h3>
+          <p>Rearrange numbered tiles to reach the goal configuration by sliding into the blank.</p>
+          <span class="algo-badge">A* – Manhattan Distance</span>
+        </div>
+        <div class="game-card" onclick="openGame('river')">
+          <div class="icon">🌊</div>
+          <h3>River Crossing</h3>
+          <p>Get the farmer, wolf, goat, and cabbage safely across the river without disaster!</p>
+          <span class="algo-badge">BFS – State Space</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Word Ladder -->
+    <div id="game-wordladder" class="game-page">
+      <div class="tool-header">
+        <button class="btn btn-back" onclick="openGame('home')">← Games</button>
+        <h2>Word Ladder</h2>
+      </div>
+      <div class="wl-layout">
+        <div>
+          <div class="panel">
+            <div class="panel-title">Your Path</div>
+            <div class="wl-path" id="wl-path-display">
+              <div class="small text-center" style="padding:1rem;color:var(--faint)">Enter words and click Solve to see the path</div>
+            </div>
+          </div>
+          <div class="panel mt-1">
+            <div class="panel-title">Manual Play — Type next word</div>
+            <div class="ctrl-row">
+              <input type="text" id="wl-manual-input" maxlength="4" placeholder="next word" style="text-transform:uppercase;font-family:var(--font-mono);font-size:1rem;width:140px;">
+              <button class="btn btn-primary btn-sm" onclick="wlManualStep()">Submit</button>
+            </div>
+            <div class="small mt-1" id="wl-manual-msg"></div>
+          </div>
+        </div>
+
+        <div class="wl-controls">
+          <div class="panel">
+            <div class="panel-title">Word Pair</div>
+            <div class="wl-inputs">
+              <div>
+                <label>Start Word</label>
+                <input type="text" id="wl-start" maxlength="4" value="COLD" placeholder="COLD">
+              </div>
+              <div>
+                <label>End Word</label>
+                <input type="text" id="wl-end" maxlength="4" value="WARM" placeholder="WARM">
+              </div>
+            </div>
+            <button class="btn btn-primary w-full mt-1" onclick="wlSolve()">🧠 Solve with BFS</button>
+            <button class="btn btn-secondary w-full mt-1" onclick="wlRandom()">🎲 Random Pair</button>
+            <button class="btn btn-secondary w-full mt-1" onclick="wlReset()">↺ Reset</button>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Statistics</div>
+            <div class="stats-row" style="flex-direction:column;gap:5px;">
+              <div class="stat-chip">
+                <span class="val" id="wl-stat-steps">–</span>
+                <span class="lbl">Steps</span>
+              </div>
+              <div class="stat-chip">
+                <span class="val" id="wl-stat-nodes">–</span>
+                <span class="lbl">Nodes Visited</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Solution Log</div>
+            <div class="log-area" id="wl-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sliding Puzzle -->
+    <div id="game-sliding" class="game-page">
+      <div class="tool-header">
+        <button class="btn btn-back" onclick="openGame('home')">← Games</button>
+        <h2>8-Puzzle (Sliding)</h2>
+      </div>
+      <div class="puzzle-layout">
+        <div>
+          <div class="puzzle-grid" id="puzzle-grid"></div>
+          <div class="ctrl-row mt-1">
+            <button class="btn btn-secondary btn-sm" onclick="puzzleShuffle()">🎲 Shuffle</button>
+            <button class="btn btn-primary btn-sm" onclick="puzzleSolve()">🧠 Solve (A*)</button>
+            <button class="btn btn-secondary btn-sm" onclick="puzzleReset()">↺ Reset</button>
+          </div>
+          <div class="small mt-1" id="puzzle-msg">Click tiles to slide them, or shuffle and solve!</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:0.8rem;">
+          <div class="panel">
+            <div class="panel-title">Goal State</div>
+            <div class="puzzle-grid" id="puzzle-goal" style="transform:scale(0.65);transform-origin:top left;margin-bottom:-40px;"></div>
+          </div>
+          <div class="panel" style="margin-top:0.5rem;">
+            <div class="panel-title">Statistics</div>
+            <div class="stats-row" style="flex-direction:column;gap:5px;">
+              <div class="stat-chip">
+                <span class="val" id="p-stat-moves">0</span>
+                <span class="lbl">Moves</span>
+              </div>
+              <div class="stat-chip">
+                <span class="val" id="p-stat-nodes">–</span>
+                <span class="lbl">Nodes Expanded</span>
+              </div>
+              <div class="stat-chip">
+                <span class="val" id="p-stat-solution">–</span>
+                <span class="lbl">Solution Len</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Solution Steps</div>
+            <div class="log-area" id="puzzle-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- River Crossing -->
+    <div id="game-river" class="game-page">
+      <div class="tool-header">
+        <button class="btn btn-back" onclick="openGame('home')">← Games</button>
+        <h2>River Crossing</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 260px;gap:1rem;align-items:start;">
+        <div>
+          <div class="river-scene">
+            <div class="river-scene-grid">
+              <div class="river-bank left" id="rc-left-bank"></div>
+              <div class="river-water" id="rc-water">
+                <div class="boat-area" id="rc-boat">
+                  <span class="boat-label">⛵ Boat</span>
+                  <div id="rc-boat-actors" style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;"></div>
+                </div>
+              </div>
+              <div class="river-bank right" id="rc-right-bank"></div>
+            </div>
+          </div>
+          <div class="ctrl-row mt-1" id="rc-action-row">
+            <button class="btn btn-primary btn-sm" onclick="rcCross()">🚤 Cross River</button>
+            <button class="btn btn-secondary btn-sm" onclick="rcDeselectAll()">Deselect</button>
+          </div>
+          <div class="small mt-1" id="rc-msg">Select items to put in the boat, then cross.</div>
+          <div class="move-log mt-1" id="rc-log"></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:0.8rem;">
+          <div class="panel">
+            <div class="panel-title">Rules</div>
+            <p class="small">🐺 Wolf eats goat if left alone.<br>🐐 Goat eats cabbage if left alone.<br>🚤 Boat holds farmer + 1 item.<br>🌾 Farmer must be in boat.</p>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Controls</div>
+            <div class="btn-group" style="display:flex;flex-direction:column;gap:6px;">
+              <button class="btn btn-primary" onclick="rcSolve()">🧠 Solve with BFS</button>
+              <button class="btn btn-secondary" onclick="rcNextStep()" id="rc-step-btn" disabled>⏭ Next Step</button>
+              <button class="btn btn-secondary" onclick="rcReset()">↺ Reset</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Solution Steps</div>
+            <div class="log-area" id="rc-solution-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══ FOOTER ════════════════════════════════════════ -->
+<footer id="site-footer">
+  AlgoViz · AI Search Visualizer · BFS · DFS · A* · UCS · Greedy
+</footer>
+
+<!-- ══ SCRIPTS ════════════════════════════════════════ -->
+<script src="js/app.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/maze.js"></script>
+<script src="js/wordladder.js"></script>
+<script src="js/slidingpuzzle.js"></script>
+<script src="js/rivercrossing.js"></script>
+
+</body>
+</html>
